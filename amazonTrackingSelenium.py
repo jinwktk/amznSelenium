@@ -6,7 +6,12 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # WebDriverの設定とブラウザの起動
-driver = webdriver.Chrome()
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--disable-dev-shm-usage')
+
+driver = webdriver.Chrome(options=chrome_options)
 driver.implicitly_wait(10)
 
 # 商品検索結果ページにアクセス
@@ -111,6 +116,7 @@ def save_to_google_sheet(data):
 try:
     # メイン処理
     product_data = extract_amazon_data()
+    print(f"データ取得完了" + product_data)
     save_to_google_sheet(product_data)
 
 except Exception as e:
