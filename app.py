@@ -6,6 +6,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import concurrent.futures
 from tqdm import tqdm
+from tempfile import mkdtemp
 
 # WebDriverの設定
 options = webdriver.ChromeOptions()
@@ -29,11 +30,11 @@ options.add_argument("--remote-debugging-port=9222")
 url = "https://www.amazon.co.jp/s?k=%E6%99%82%E8%A8%88&__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2GA5Q5PCRJLLG&sprefix=%E6%99%82%E8%A8%88%2Caps%2C259&ref=nb_sb_noss_1"
 
 # 並列処理数
-window = 5
+window = 10
 
 # スプレッドシート設定
 spread_url = "https://docs.google.com/spreadsheets/d/1Ge-6EEo571WzaQ-RcAgbW4n0ZcDgIf-f-27T8IcvDE8/edit#gid=0"
-header = ["商品名", "金額", "ポイント", "梱包サイズ", "ASIN", "商品画像（複数）", "商品URL", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "梱包サイズ（Length）","梱包サイズ（Width）","梱包サイズ（Height）","梱包サイズ（Weight）","在庫有無", "在庫数"]
+header = ["商品名", "金額", "ポイント", "ASIN", "商品URL", "商品画像（複数）", "梱包サイズ", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "梱包サイズ（Length）","梱包サイズ（Width）","梱包サイズ（Height）","梱包サイズ（Weight）","在庫有無", "在庫数"]
 key_json = "gasKey.json"
 
 def extract_amazon_data():
@@ -50,7 +51,7 @@ def extract_amazon_data():
     products = []
 
     # DEBUG  ###########
-    product_list = product_list[0:1]
+    product_list = product_list[0:30]
     # /DEBUG ###########
 
     # 並行処理
@@ -58,6 +59,7 @@ def extract_amazon_data():
     futures = [executor.submit(extract_amazon_detail_data, product) for product in product_list]
 
     # 処理件数
+    print("商品情報取得中...")
     progress = tqdm(total = len(product_list))
     for future in concurrent.futures.as_completed(futures):
         progress.update(1)
@@ -70,68 +72,66 @@ def extract_amazon_data():
     return products
 
 def extract_amazon_detail_data(product):
+    product_dict = {}
     try:
         # 商品名を取得
-        product_name = product.find_element(By.CSS_SELECTOR, "h2 a span").text
+        product_dict["product_name"] = product.find_element(By.CSS_SELECTOR, "h2 a span").text
     except Exception:
-        product_name = "商品名が見つかりませんでした"
+        product_dict["product_name"] = "商品名が見つかりませんでした"
 
     try:
         # 価格の取得
-        product_price = product.find_element(By.CSS_SELECTOR, "span.a-price-whole").text
+        product_dict["product_price"] = product.find_element(By.CSS_SELECTOR, "span.a-price-whole").text
     except:
         try:
             # セール価格またはその他の形式の価格を探す
-            product_price = product.find_element(By.CSS_SELECTOR, "span.a-color-price span.a-offscreen").text
+            product_dict["product_price"] = product.find_element(By.CSS_SELECTOR, "span.a-color-price span.a-offscreen").text
         except Exception:
-            product_price = "価格が見つかりませんでした"
+            product_dict["product_price"] = "価格が見つかりませんでした"
 
     try:
         # ポイントの取得
-        product_point = product.find_element(By.CSS_SELECTOR, "span.a-size-base.a-color-price").text
+        product_dict["product_point"] = product.find_element(By.CSS_SELECTOR, "span.a-size-base.a-color-price").text
     except Exception:
-        product_point = "ポイントが見つかりませんでした"
+        product_dict["product_point"] = "ポイントが見つかりませんでした"
 
     try:
         # ASINの取得
-        asin = product.get_attribute('data-asin')
+        product_dict["asin"] = product.get_attribute("data-asin")
         # 商品URLの作成
-        product_url = "https://www.amazon.co.jp/dp/" + asin
+        product_dict["product_url"] = "https://www.amazon.co.jp/dp/" + product_dict["asin"]
     except Exception:
-        asin = "ASINが見つかりませんでした"
+        product_dict["asin"] = "ASINが見つかりませんでした"
+        product_dict["product_url"] = "商品URLが見つかりませんでした"
 
-    # 各商品の詳細ページにアクセスして梱包サイズを取得
-    detail = create_webdriver()
-    detail.get("https://www.amazon.co.jp/dp/" + asin)
-    WebDriverWait(detail, 10).until(EC.presence_of_all_elements_located)
+    return list(product_dict.values())
+    # DockerでSeleniumを2個WebDriverを作成できない
 
-    try:
-        image_urls = []
-        # 商品画像の取得
-        for img in detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img"):
-            image_urls.append(img.get_attribute("src"))
-        product_image_url = "\n".join(image_urls)
-    except Exception:
-        product_image_url = "商品画像が見つかりませんでした"
+    if product_dict["product_url"] != "商品URLが見つかりませんでした":
+        # 各商品の詳細ページにアクセスして梱包サイズを取得
+        detail = create_webdriver()
+        detail.get(product_dict["product_url"])
+        WebDriverWait(detail, 10).until(EC.presence_of_all_elements_located)
 
-    # 詳細ページで梱包サイズを取得
-    try:
-        package_size = detail.find_element(By.XPATH, "//*[contains(text(), \"梱包サイズ\")]/following-sibling::span").text
-    except Exception:
-        package_size = "梱包サイズが見つかりませんでした"
+        try:
+            image_urls = []
+            # 商品画像の取得
+            for img in detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img"):
+                image_urls.append(img.get_attribute("src"))
+            product_dict["product_image_url"] = "\n".join(image_urls)
+        except Exception:
+            product_dict["product_image_url"] = "商品画像が見つかりませんでした"
 
-    # 終了
-    detail.quit()
+        # 詳細ページで梱包サイズを取得
+        try:
+            product_dict["package_size"] = detail.find_element(By.XPATH, "//*[contains(text(), \"梱包サイズ\")]/following-sibling::span").text
+        except Exception:
+            product_dict["package_size"] = "梱包サイズが見つかりませんでした"
 
-    return [
-        product_name,
-        product_price,
-        product_point,
-        package_size,
-        asin,
-        product_image_url,
-        product_url,
-    ]
+        # 終了
+        detail.quit()
+
+    return list(product_dict.values())
 
 def create_webdriver():
     driver = webdriver.Chrome(options=options, service=service)
@@ -155,10 +155,11 @@ def save_to_google_sheet(data):
     worksheet.append_row(header)
     
     # データを書き込む
+    print("スプレッドシート書き込み中取得中...")
+    progress = tqdm(total = len(data))
     for product in data:
+        progress.update(1)
         worksheet.append_row(product)
-
-    print("Data saved to Google Spreadsheet")
 
 def handler(event, context):
     try:
@@ -168,3 +169,5 @@ def handler(event, context):
 
     except Exception as e:
         print(f"エラーが発生しました: {e}")
+
+handler(False,False)

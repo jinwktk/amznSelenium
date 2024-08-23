@@ -1,0 +1,8 @@
+services:
+  selenium:
+    build:
+      dockerfile: ./Dockerfile
+    tty: true
+    working_dir: "/var/task"
+    volumes:
+      - "./:/var/task"
