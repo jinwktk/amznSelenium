@@ -8,11 +8,22 @@ import concurrent.futures
 from tqdm import tqdm
 
 # WebDriverの設定
-chrome_options = webdriver.ChromeOptions()
-# chrome_options.add_argument('--headless')
-# chrome_options.add_argument('--no-sandbox')
-# chrome_options.add_argument('--disable-dev-shm-usage')
-chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+options = webdriver.ChromeOptions()
+service = webdriver.ChromeService("/opt/chromedriver")
+
+options.binary_location = '/opt/chrome/chrome'
+options.add_argument("--headless=new")
+options.add_argument('--no-sandbox')
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1280x1696")
+options.add_argument("--single-process")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-dev-tools")
+options.add_argument("--no-zygote")
+options.add_argument(f"--user-data-dir={mkdtemp()}")
+options.add_argument(f"--data-path={mkdtemp()}")
+options.add_argument(f"--disk-cache-dir={mkdtemp()}")
+options.add_argument("--remote-debugging-port=9222")
 
 # スクレイピング画面
 url = "https://www.amazon.co.jp/s?k=%E6%99%82%E8%A8%88&__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2GA5Q5PCRJLLG&sprefix=%E6%99%82%E8%A8%88%2Caps%2C259&ref=nb_sb_noss_1"
@@ -22,7 +33,7 @@ window = 5
 
 # スプレッドシート設定
 spread_url = "https://docs.google.com/spreadsheets/d/1Ge-6EEo571WzaQ-RcAgbW4n0ZcDgIf-f-27T8IcvDE8/edit#gid=0"
-header = ["商品名", "価格", "ポイント", "ASIN", "梱包サイズ", "商品画像URL", "product_link"]
+header = ["商品名", "金額", "ポイント", "梱包サイズ", "ASIN", "商品画像（複数）", "商品URL", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "梱包サイズ（Length）","梱包サイズ（Width）","梱包サイズ（Height）","梱包サイズ（Weight）","在庫有無", "在庫数"]
 key_json = "gasKey.json"
 
 def extract_amazon_data():
@@ -38,7 +49,10 @@ def extract_amazon_data():
     # 商品名と価格を保存するリスト
     products = []
 
-    product_list = product_list[0:10]
+    # DEBUG  ###########
+    product_list = product_list[0:1]
+    # /DEBUG ###########
+
     # 並行処理
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=window)
     futures = [executor.submit(extract_amazon_detail_data, product) for product in product_list]
@@ -56,8 +70,6 @@ def extract_amazon_data():
     return products
 
 def extract_amazon_detail_data(product):
-    driver = create_webdriver()
-
     try:
         # 商品名を取得
         product_name = product.find_element(By.CSS_SELECTOR, "h2 a span").text
@@ -81,43 +93,48 @@ def extract_amazon_detail_data(product):
         product_point = "ポイントが見つかりませんでした"
 
     try:
-        # ASINの取得 (商品ページのリンクから抽出)
-        product_link = product.find_element(By.CSS_SELECTOR, "h2 a").get_attribute("href")
-        asin = product_link.split("/dp/")[1][:10] if "/dp/" in product_link else "ASINが見つかりませんでした"
+        # ASINの取得
+        asin = product.get_attribute('data-asin')
+        # 商品URLの作成
+        product_url = "https://www.amazon.co.jp/dp/" + asin
     except Exception:
         asin = "ASINが見つかりませんでした"
 
+    # 各商品の詳細ページにアクセスして梱包サイズを取得
+    detail = create_webdriver()
+    detail.get("https://www.amazon.co.jp/dp/" + asin)
+    WebDriverWait(detail, 10).until(EC.presence_of_all_elements_located)
+
     try:
+        image_urls = []
         # 商品画像の取得
-        product_image_url = product.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
+        for img in detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img"):
+            image_urls.append(img.get_attribute("src"))
+        product_image_url = "\n".join(image_urls)
     except Exception:
         product_image_url = "商品画像が見つかりませんでした"
 
     # 詳細ページで梱包サイズを取得
     try:
-        # 各商品の詳細ページにアクセスして梱包サイズを取得
-        driver.get(product_link)
-        package_size = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//*[contains(text(), "梱包サイズ")]/following-sibling::span'))
-        ).text
+        package_size = detail.find_element(By.XPATH, "//*[contains(text(), \"梱包サイズ\")]/following-sibling::span").text
     except Exception:
         package_size = "梱包サイズが見つかりませんでした"
 
     # 終了
-    driver.quit()
+    detail.quit()
 
     return [
         product_name,
         product_price,
         product_point,
-        asin,
         package_size,
+        asin,
         product_image_url,
-        product_link
+        product_url,
     ]
 
 def create_webdriver():
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(options=options, service=service)
     driver.implicitly_wait(10)
     return driver
 
@@ -143,7 +160,7 @@ def save_to_google_sheet(data):
 
     print("Data saved to Google Spreadsheet")
 
-if __name__ == '__main__':
+def handler(event, context):
     try:
         # メイン処理
         product_data = extract_amazon_data()
