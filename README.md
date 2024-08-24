@@ -15,9 +15,11 @@ https://docs.google.com/spreadsheets/d/1Ge-6EEo571WzaQ-RcAgbW4n0ZcDgIf-f-27T8Icv
 ## ECR
 
 ```sh
-docker build -t 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium:latest .
+aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com
 
-aws ecr get-login-password | docker login --username AWS --password-stdin 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium
+docker build -t amazon_tracking_selenium .
 
-docker push 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium
+docker tag amazon_tracking_selenium:latest 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium:latest
+
+docker push 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium:latest
 ```
