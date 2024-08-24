@@ -2,10 +2,10 @@
 
 ## 導入
 ```sh
-# パッケージインストール（初回のみ）
-pip install -r requirements.txt
+docker-compose up
 
-py app.py
+# 別窓で実行
+docker-compose exec selenium python app.py
 ```
 
 ## 出力先スプシ
