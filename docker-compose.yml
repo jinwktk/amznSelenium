@@ -1,3 +1,4 @@
+version: "3"
 services:
   selenium:
     build:
@@ -6,3 +7,83 @@ services:
     working_dir: "/var/task"
     volumes:
       - "./:/var/task"
+
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: selenium-hub
+    ports:
+      - "4444:4444"  # Hubのポートをホストとマッピング
+    environment:
+      - GRID_MAX_SESSION=5  # 最大セッション数の設定
+      - GRID_BROWSER_TIMEOUT=300000  # ブラウザのタイムアウト設定
+      - GRID_TIMEOUT=300000  # セッションのタイムアウト設定
+
+  chrome1:
+    image: selenium/node-chrome:latest
+    container_name: node-chrome1
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    ports:
+      - "5901:5901"
+    volumes:
+      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+  chrome2:
+    image: selenium/node-chrome:latest
+    container_name: node-chrome2
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - "5902:5902"
+    volumes:
+      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+  chrome3:
+    image: selenium/node-chrome:latest
+    container_name: node-chrome3
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - "5903:5903"
+    volumes:
+      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+  chrome4:
+    image: selenium/node-chrome:latest
+    container_name: node-chrome4
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - "5904:5904"
+    volumes:
+      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+  chrome5:
+    image: selenium/node-chrome:latest
+    container_name: node-chrome5
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - "5905:5905"
+    volumes:
+      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定

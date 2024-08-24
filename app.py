@@ -10,8 +10,6 @@ from tempfile import mkdtemp
 
 # WebDriverの設定
 options = webdriver.ChromeOptions()
-service = webdriver.ChromeService("/opt/chromedriver")
-
 options.binary_location = '/opt/chrome/chrome'
 options.add_argument("--headless=new")
 options.add_argument('--no-sandbox')
@@ -34,7 +32,7 @@ window = 10
 
 # スプレッドシート設定
 spread_url = "https://docs.google.com/spreadsheets/d/1Ge-6EEo571WzaQ-RcAgbW4n0ZcDgIf-f-27T8IcvDE8/edit#gid=0"
-header = ["商品名", "金額", "ポイント", "ASIN", "商品URL", "商品画像（複数）", "梱包サイズ", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "梱包サイズ（Length）","梱包サイズ（Width）","梱包サイズ（Height）","梱包サイズ（Weight）","在庫有無", "在庫数"]
+header = ["商品名", "金額", "ポイント", "ASIN", "商品URL", "商品画像（複数）", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "製品サイズ（Length）","製品サイズ（Width）","製品サイズ（Height）","製品サイズ（Weight）","在庫状況"]
 key_json = "gasKey.json"
 
 def extract_amazon_data():
@@ -51,7 +49,7 @@ def extract_amazon_data():
     products = []
 
     # DEBUG  ###########
-    product_list = product_list[0:30]
+    # product_list = product_list[0:30]
     # /DEBUG ###########
 
     # 並行処理
@@ -77,7 +75,7 @@ def extract_amazon_detail_data(product):
         # 商品名を取得
         product_dict["product_name"] = product.find_element(By.CSS_SELECTOR, "h2 a span").text
     except Exception:
-        product_dict["product_name"] = "商品名が見つかりませんでした"
+        product_dict["product_name"] = "取得不可"
 
     try:
         # 価格の取得
@@ -87,13 +85,13 @@ def extract_amazon_detail_data(product):
             # セール価格またはその他の形式の価格を探す
             product_dict["product_price"] = product.find_element(By.CSS_SELECTOR, "span.a-color-price span.a-offscreen").text
         except Exception:
-            product_dict["product_price"] = "価格が見つかりませんでした"
+            product_dict["product_price"] = "取得不可"
 
     try:
         # ポイントの取得
         product_dict["product_point"] = product.find_element(By.CSS_SELECTOR, "span.a-size-base.a-color-price").text
     except Exception:
-        product_dict["product_point"] = "ポイントが見つかりませんでした"
+        product_dict["product_point"] = "取得不可"
 
     try:
         # ASINの取得
@@ -101,14 +99,10 @@ def extract_amazon_detail_data(product):
         # 商品URLの作成
         product_dict["product_url"] = "https://www.amazon.co.jp/dp/" + product_dict["asin"]
     except Exception:
-        product_dict["asin"] = "ASINが見つかりませんでした"
-        product_dict["product_url"] = "商品URLが見つかりませんでした"
+        product_dict["asin"] = "取得不可"
+        product_dict["product_url"] = "取得不可"
 
-    return list(product_dict.values())
-    # DockerでSeleniumを2個WebDriverを作成できない
-
-    if product_dict["product_url"] != "商品URLが見つかりませんでした":
-        # 各商品の詳細ページにアクセスして梱包サイズを取得
+    if product_dict["product_url"] != "取得不可":
         detail = create_webdriver()
         detail.get(product_dict["product_url"])
         WebDriverWait(detail, 10).until(EC.presence_of_all_elements_located)
@@ -116,25 +110,71 @@ def extract_amazon_detail_data(product):
         try:
             image_urls = []
             # 商品画像の取得
-            for img in detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img"):
-                image_urls.append(img.get_attribute("src"))
-            product_dict["product_image_url"] = "\n".join(image_urls)
+            for i in range(0, 7):
+                product_dict["product_image_url" + i] = detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img")[i].get_attribute("src")
         except Exception:
-            product_dict["product_image_url"] = "商品画像が見つかりませんでした"
-
-        # 詳細ページで梱包サイズを取得
+            product_dict["product_image_url"] = "取得不可"
+        
         try:
-            product_dict["package_size"] = detail.find_element(By.XPATH, "//*[contains(text(), \"梱包サイズ\")]/following-sibling::span").text
+            # Category_AMAZONの取得
+            product_dict["category"] = detail.find_element(By.CSS_SELECTOR, ".cat-link").text.replace("- カテゴリ ", "")
         except Exception:
-            product_dict["package_size"] = "梱包サイズが見つかりませんでした"
+            product_dict["category"] = "取得不可"
 
+        try:
+            # Descriptionの取得
+            product_dict["description"] = detail.find_element(By.CSS_SELECTOR, "#productDescription span").text
+        except Exception:
+            product_dict["description"] = "取得不可"
+        
+        try:
+            # Featuresの取得
+            product_dict["features"] = detail.find_element(By.CSS_SELECTOR, "#feature-bullets .a-unordered-list").text
+        except Exception:
+            try:
+                # その他の形式のFeaturesを探す
+                features = []
+                for feature in detail.find_elements(By.CSS_SELECTOR, "#productFactsDesktop_feature_div ul"):
+                    features.append(feature.text)
+                product_dict["features"] = "\n".join(features)
+            except Exception:
+                product_dict["features"] = "取得不可"
+
+        try:
+            # Amazon_Brandの取得
+            product_dict["brand"] = detail.find_element(By.CSS_SELECTOR, ".po-brand .po-break-word").text
+        except Exception:
+            product_dict["brand"] = "取得不可"
+        
+        try:
+            # 梱包サイズの取得
+            package_size = detail.find_element(By.XPATH, "//*[contains(text(), \"製品サイズ\")]/following-sibling::td").text
+            product_dict["package_size_length"] = package_size.split()[0]
+            product_dict["package_size_width"] = package_size.split()[2]
+            product_dict["package_size_height"] = package_size.split()[4]
+            product_dict["package_size_weight"] = package_size.split()[6]
+        except Exception:
+            product_dict["package_size_length"] = "取得不可"
+            product_dict["package_size_width"] = "取得不可"
+            product_dict["package_size_height"] = "取得不可"
+            product_dict["package_size_weight"] = "取得不可"
+
+        try:
+            # 在庫状況の取得
+            product_dict["stock"] = detail.find_element(By.CSS_SELECTOR, "#availability span").text.replace("。", "").replace("ご注文はお早めに", "").replace(" ", "")
+        except Exception:
+            product_dict["stock"] = "取得不可"
+            
         # 終了
         detail.quit()
 
     return list(product_dict.values())
 
 def create_webdriver():
-    driver = webdriver.Chrome(options=options, service=service)
+    driver = webdriver.Remote(
+        command_executor='http://selenium-hub:4444/wd/hub',
+        options=options
+    )
     driver.implicitly_wait(10)
     return driver
 
@@ -169,3 +209,5 @@ def handler(event=None, context=None):
 
     except Exception as e:
         print(f"エラーが発生しました: {e}")
+
+handler()
