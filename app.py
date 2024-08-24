@@ -161,7 +161,7 @@ def save_to_google_sheet(data):
         progress.update(1)
         worksheet.append_row(product)
 
-def handler(event, context):
+def handler(event=None, context=None):
     try:
         # メイン処理
         product_data = extract_amazon_data()
@@ -169,5 +169,3 @@ def handler(event, context):
 
     except Exception as e:
         print(f"エラーが発生しました: {e}")
-
-handler(False,False)
