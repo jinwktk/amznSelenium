@@ -110,8 +110,9 @@ def extract_amazon_detail_data(product):
         try:
             image_urls = []
             # 商品画像の取得
-            for i in range(0, 7):
-                product_dict["product_image_url" + i] = detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img")[i].get_attribute("src")
+            for img in detail.find_elements(By.CSS_SELECTOR, "#altImages li.imageThumbnail img"):
+                image_urls.append(img.get_attribute("src"))
+            product_dict["product_image_url"] = "\n".join(image_urls)
         except Exception:
             product_dict["product_image_url"] = "取得不可"
         
