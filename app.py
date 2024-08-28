@@ -118,7 +118,7 @@ def extract_amazon_detail_data(product):
         
         try:
             # Category_AMAZONの取得
-            product_dict["category"] = detail.find_element(By.CSS_SELECTOR, ".cat-link").text.replace("- カテゴリ ", "")
+            product_dict["category"] = detail.find_element(By.CSS_SELECTOR, "#wayfinding-breadcrumbs_feature_div li:last-child a").text
         except Exception:
             product_dict["category"] = "取得不可"
 

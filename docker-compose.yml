@@ -12,11 +12,11 @@ services:
     image: selenium/hub:latest
     container_name: selenium-hub
     ports:
-      - "4444:4444"  # Hubのポートをホストとマッピング
+      - "4444:4444"
     environment:
-      - GRID_MAX_SESSION=5  # 最大セッション数の設定
-      - GRID_BROWSER_TIMEOUT=300000  # ブラウザのタイムアウト設定
-      - GRID_TIMEOUT=300000  # セッションのタイムアウト設定
+      - GRID_MAX_SESSION=5
+      - GRID_BROWSER_TIMEOUT=300000
+      - GRID_TIMEOUT=300000
 
   chrome1:
     image: selenium/node-chrome:latest
@@ -30,7 +30,7 @@ services:
     ports:
       - "5901:5901"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome2:
     image: selenium/node-chrome:latest
     container_name: node-chrome2
@@ -44,7 +44,7 @@ services:
     ports:
       - "5902:5902"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome3:
     image: selenium/node-chrome:latest
     container_name: node-chrome3
@@ -58,7 +58,7 @@ services:
     ports:
       - "5903:5903"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome4:
     image: selenium/node-chrome:latest
     container_name: node-chrome4
@@ -72,7 +72,7 @@ services:
     ports:
       - "5904:5904"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome5:
     image: selenium/node-chrome:latest
     container_name: node-chrome5
@@ -86,7 +86,7 @@ services:
     ports:
       - "5905:5905"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome6:
     image: selenium/node-chrome:latest
     container_name: node-chrome6
@@ -100,7 +100,7 @@ services:
     ports:
       - "5906:5906"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome7:
     image: selenium/node-chrome:latest
     container_name: node-chrome7
@@ -114,7 +114,7 @@ services:
     ports:
       - "5907:5907"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome8:
     image: selenium/node-chrome:latest
     container_name: node-chrome8
@@ -128,7 +128,7 @@ services:
     ports:
       - "5908:5908"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome9:
     image: selenium/node-chrome:latest
     container_name: node-chrome9
@@ -142,7 +142,7 @@ services:
     ports:
       - "5909:5909"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome10:
     image: selenium/node-chrome:latest
     container_name: node-chrome10
@@ -156,7 +156,7 @@ services:
     ports:
       - "5910:5910"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
   chrome11:
     image: selenium/node-chrome:latest
     container_name: node-chrome11
@@ -170,4 +170,4 @@ services:
     ports:
       - "5911:5911"
     volumes:
-      - /dev/shm:/dev/shm  # Chromeのパフォーマンス向上のための設定
+      - /dev/shm:/dev/shm
