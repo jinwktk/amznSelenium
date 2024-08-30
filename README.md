@@ -23,3 +23,28 @@ docker tag amazon_tracking_selenium:latest 533267382959.dkr.ecr.ap-northeast-1.a
 
 docker push 533267382959.dkr.ecr.ap-northeast-1.amazonaws.com/amazon_tracking_selenium:latest
 ```
+
+## S3
+
+https://amazon-tracking-selenium.s3.ap-northeast-1.amazonaws.com/${asin}/{画像名}
+
+## TODO
+
+毎回書き出し先のスプシを変える
+2ページ目まで取る
+ユーザーエージェントのカスタマイズ
+```
+options = webdriver.ChromeOptions()
+proxy = "http://your_proxy_here:port"
+options.add_argument(f'--proxy-server={proxy}')
+driver = webdriver.Chrome(options=options)
+```
+
+IPアドレスのローテーション
+```
+from selenium import webdriver
+
+options = webdriver.ChromeOptions()
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36")
+driver = webdriver.Chrome(options=options)
+```

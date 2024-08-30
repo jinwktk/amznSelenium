@@ -36,7 +36,7 @@ window = 10
 
 # スプレッドシート設定
 spread_url = "https://docs.google.com/spreadsheets/d/1Ge-6EEo571WzaQ-RcAgbW4n0ZcDgIf-f-27T8IcvDE8/edit#gid=0"
-header = ["商品名", "金額", "ポイント", "ASIN", "商品URL", "商品画像（複数）", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "製品サイズ（Length）","製品サイズ（Width）","製品サイズ（Height）","製品サイズ（Weight）","在庫状況"]
+header = ["商品名", "金額", "ポイント", "ASIN", "商品URL", "商品画像（複数）", "Category_AMAZON", "Description", "Features", "Amazon_Brand", "製品サイズ（Length）","製品サイズ（Width）","製品サイズ（Height）","製品サイズ（Weight）","梱包重量","在庫状況"]
 key_json = "gasKey.json"
 
 def extract_amazon_data():
@@ -53,7 +53,7 @@ def extract_amazon_data():
     products = []
 
     # DEBUG  ###########
-    product_list = product_list[0:1]
+    # product_list = product_list[0:1]
     # /DEBUG ###########
 
     # 並行処理
@@ -165,6 +165,12 @@ def extract_amazon_detail_data(product):
             product_dict["package_size_weight"] = "取得不可"
 
         try:
+            # 梱包重量の取得
+            product_dict["pack_weight"] = detail.find_element(By.XPATH, "//*[contains(text(), \"梱包重量\")]/following-sibling::td").text
+        except Exception:
+            product_dict["pack_weight"] = "取得不可"
+
+        try:
             # 在庫状況の取得
             product_dict["stock"] = detail.find_element(By.CSS_SELECTOR, "#availability span").text.replace("。", "").replace("ご注文はお早めに", "").replace(" ", "")
         except Exception:
@@ -224,7 +230,7 @@ def upload_to_s3(file_name, bucket, s3_file_name):
         # アップロード済みの画像を削除
         file_path = Path(file_name)
         file_path.unlink()
-        
+
         return True
     except FileNotFoundError:
         print("The file was not found")
