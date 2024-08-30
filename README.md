@@ -30,8 +30,8 @@ https://amazon-tracking-selenium.s3.ap-northeast-1.amazonaws.com/${asin}/{画像
 
 ## TODO
 
-毎回書き出し先のスプシを変える
-2ページ目まで取る
+毎回書き出し先のスプシを変える  
+2ページ目まで取る  
 ユーザーエージェントのカスタマイズ
 ```
 options = webdriver.ChromeOptions()
