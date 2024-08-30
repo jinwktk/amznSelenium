@@ -7,6 +7,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 import concurrent.futures
 from tqdm import tqdm
 from tempfile import mkdtemp
+import requests
+import boto3
+from botocore.exceptions import NoCredentialsError
+from pathlib import Path
 
 # WebDriverの設定
 options = webdriver.ChromeOptions()
@@ -49,7 +53,7 @@ def extract_amazon_data():
     products = []
 
     # DEBUG  ###########
-    # product_list = product_list[0:30]
+    product_list = product_list[0:1]
     # /DEBUG ###########
 
     # 並行処理
@@ -171,14 +175,6 @@ def extract_amazon_detail_data(product):
 
     return list(product_dict.values())
 
-def create_webdriver():
-    driver = webdriver.Remote(
-        command_executor='http://selenium-hub:4444/wd/hub',
-        options=options
-    )
-    driver.implicitly_wait(10)
-    return driver
-
 def save_to_google_sheet(data):
     # Googleスプレッドシートに接続
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -202,11 +198,65 @@ def save_to_google_sheet(data):
         progress.update(1)
         worksheet.append_row(product)
 
+def save_image(data):
+    s3_bucket_name = "amazon-tracking-selenium"
+
+    for product in data:
+        asin = product[3]
+        image_urls = product[5].split()
+
+        for image_url in image_urls:
+            image_path = image_url.split("/")[-1]
+
+            # 画像をダウンロード
+            downloaded_image = download_image(image_url, image_path)
+
+            # S3にアップロード
+            upload_to_s3(downloaded_image, s3_bucket_name, asin + "/" + image_path)
+
+def upload_to_s3(file_name, bucket, s3_file_name):
+    # S3へアップロード
+    s3 = boto3.client('s3')
+    try:
+        s3.upload_file(file_name, bucket, s3_file_name)
+        print(f"Upload Successful: {s3_file_name}")
+
+        # アップロード済みの画像を削除
+        file_path = Path(file_name)
+        file_path.unlink()
+        
+        return True
+    except FileNotFoundError:
+        print("The file was not found")
+        return False
+    except NoCredentialsError:
+        print("Credentials not available")
+        return False
+
+def download_image(url, save_path):
+    # 画像をURLからダウンロード
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(save_path, 'wb') as file:
+            file.write(response.content)
+        return save_path
+    else:
+        raise Exception("Failed to download image from URL")
+
+def create_webdriver():
+    driver = webdriver.Remote(
+        command_executor='http://selenium-hub:4444/wd/hub',
+        options=options
+    )
+    driver.implicitly_wait(10)
+    return driver
+
 def handler(event=None, context=None):
     try:
         # メイン処理
         product_data = extract_amazon_data()
         save_to_google_sheet(product_data)
+        save_image(product_data)
 
     except Exception as e:
         print(f"エラーが発生しました: {e}")

@@ -7,6 +7,7 @@ services:
     working_dir: "/var/task"
     volumes:
       - "./:/var/task"
+      - "./.aws:/root/.aws"
 
   selenium-hub:
     image: selenium/hub:latest
