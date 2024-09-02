@@ -30,17 +30,8 @@ https://amazon-tracking-selenium.s3.ap-northeast-1.amazonaws.com/${asin}/{画像
 
 ## TODO
 
-毎回書き出し先のスプシを変える  
-2ページ目まで取る  
+CSVに書き出してS3へ保存    
 ユーザーエージェントのカスタマイズ
-```
-options = webdriver.ChromeOptions()
-proxy = "http://your_proxy_here:port"
-options.add_argument(f'--proxy-server={proxy}')
-driver = webdriver.Chrome(options=options)
-```
-
-IPアドレスのローテーション
 ```
 from selenium import webdriver
 
